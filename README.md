@@ -1,4 +1,4 @@
-## Simulation of organisms(Nlobs) in Pygame!
+## Simulation of organisms(Blobs) in Pygame!
 
 This is my first upload to github.
 
