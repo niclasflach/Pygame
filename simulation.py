@@ -8,6 +8,7 @@ pygame.init()
 size = width, height = 1024,800
 black = 0,0,0
 grey = 200,200,200
+red = 255,0,0
 green = 180,250,180
 screen = pygame.display.set_mode(size)
 blobs = []
@@ -23,9 +24,11 @@ class Blob:
         self.size = size 
         self.direction = pygame.Vector2(random.randint(-10,10) , random.randint(-10,10) )
         self.speed = 0.1
-        self.agility = 1
+        self.agility = 0.5
         self.los_length = 150
         self.target = pygame.Vector2()
+        self.angle_to_target = 0
+        self.angle_distance_target = 0
         
         self.direction = self.direction.normalize()
         # self.direction = random.randint(0,10) - 5, random.randint(0,10) - 5
@@ -38,32 +41,38 @@ class Blob:
     
     def draw(self):
         #self.sprite to use with collision detection
+        
+        self.size = 5+ (self.life / 2000)
         self.sprite = pygame.draw.circle(screen, (black), self.position, self.size, 0)
+        pygame.draw.circle(screen, (red), self.target, 2, 0)
         pygame.draw.line(screen, black, self.position,  (self.size * 2 * self.direction) + self.position  )
     
     
     def look_for_food(self):
         for food in range(len(foods)):
-            # print(foods[food].sprite)
+
             distance_vector = self.position - foods[food].position
-            distance_vector_target = self.position - foods[food].position
+            vector_to_target = self.position - self.target
+            self.angle_to_target = vector_to_degrees(vector_to_target) 
+            self.angle_distance_target = self.angle_to_target - (vector_to_degrees(self.direction) +180)
+            self.angle_distance_target = map_to_range(self.angle_distance_target)
+
+            distance_vector_target = self.target - self.position
             distance = distance_vector.length()
             distance_target = distance_vector_target.length()
             if distance < self.los_length:
                 distance_orientation = vector_to_degrees(distance_vector)
                 angular_distance = distance_orientation - (vector_to_degrees(self.direction) +180)
                 angular_distance = map_to_range(angular_distance)
-                # print(angular_distance)
-                line_color = black
-                if abs(angular_distance) < 90:
+
+
+                if abs(angular_distance) < 70:
                     if distance < distance_target:
                         self.target = foods[food].position
-                if angular_distance > 0:
-                    self.direction = self.direction.rotate(-self.agility)
-                if angular_distance < 0:
-                    self.direction = self.direction.rotate(self.agility)
                     
-                    line_color = green                
+                    line_color = green
+                    if foods[food].position == self.target:
+                        line_color = black                 
                     pygame.draw.line(screen, line_color, self.position, foods[food].position  )
                 
         pass
@@ -71,14 +80,21 @@ class Blob:
     
     def move(self):
         if self.position.x+self.direction.x < 20:
-            self.direction = self.direction.rotate(self.agility)
+            self.target = pygame.Vector2((width/2, height/2))
         if self.position.x+self.direction.x > width-20:
-            self.direction = self.direction.rotate(self.agility)
+            self.target = pygame.Vector2((width/2, height/2))
         if self.position.y < 20:
-            self.direction = self.direction.rotate(self.agility)
+            self.target = pygame.Vector2((width/2, height/2))
         if self.position.y > height-20:
-            self.direction = self.direction.rotate(self.agility)
+            self.target = pygame.Vector2((width/2, height/2))
+        #print(self.angle_distance_target)
+        if self.angle_distance_target > 0:
+            self.direction = self.direction.rotate(-self.agility/2)
+        if self.angle_distance_target < 0:
+            self.direction = self.direction.rotate(self.agility/2)
         self.position = self.position + self.direction * self.speed
+        if self.position == self.target:
+            self.target = pygame.Vector2()
     
     
     def age(self):
@@ -93,10 +109,12 @@ class Blob:
         for food in range(len(foods)):
             # print(foods[food].sprite)
             if self.sprite.colliderect(foods[food].sprite):
+                self.life += foods[food].size * 500
+                
                 foods.pop(food)
                 
                 eaten_food.append(food)
-                self.life += 4000
+                self.target = pygame.Vector2()
                 return
             #    print("Collision")
             # collisions = pygame.sprite.spritecollide(self.sprite.rect, foods[food].sprite.rect, False, pygame.sprite.collide_circle)
@@ -108,8 +126,8 @@ class Blob:
 class Food:
     def __init__(self):
         self.sprite = pygame.sprite.Sprite()
-        self.position = pygame.Vector2(random.randint(0, width), random.randint(0,height))
-        self.size = 3
+        self.position = pygame.Vector2(random.randint(20, width-20), random.randint(20,height-20))
+        self.size = random.randint(2,8)
     
     def draw(self):
         self.sprite = pygame.draw.circle(screen, (green), self.position, self.size, 0)
@@ -171,7 +189,7 @@ def map_to_range(orientation):
 
 
 generate_Food(100)
-generate_Blobs(10)
+generate_Blobs(20)
 
 while True:
 
