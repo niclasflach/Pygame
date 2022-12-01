@@ -52,10 +52,12 @@ class Blob:
         #Most likely need to put all food sprites in a group or something for this.
         #investigation best approach
         #pygame.sprite.collide_circle() is one approach
-        
+        eaten_food = []
         for food in range(len(foods)):
             # print(foods[food].sprite)
             if self.sprite.colliderect(foods[food].sprite):
+                eaten_food.append(food)
+                self.life += 1000
                 print("Collision")
             # collisions = pygame.sprite.spritecollide(self.sprite.rect, foods[food].sprite.rect, False, pygame.sprite.collide_circle)
             # eaten_food.append(foods[food])
@@ -132,6 +134,7 @@ while True:
         blob.age()
                  
         #print(blob.life)
+    remove_eaten_food()
     remove_dead_blobs()
     
     pygame.display.flip()
