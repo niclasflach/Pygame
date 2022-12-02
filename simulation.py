@@ -10,6 +10,12 @@ black = 0,0,0
 grey = 200,200,200
 red = 255,0,0
 green = 180,250,180
+pink = 237, 104, 224
+blue = 44, 44, 230
+font = pygame.font.Font('freesansbold.ttf', 22)
+
+
+
 screen = pygame.display.set_mode(size)
 blobs = []
 foods = []
@@ -17,15 +23,16 @@ eaten_food = []
 
 
 class Blob:
-    def __init__(self,position, size):
+    def __init__(self,position, size, gender):
         self.life = random.randint(5000,10000)
         self.position = pygame.Vector2(position)
         # self.position = position
+        self.gender = gender
         self.size = size 
         self.direction = pygame.Vector2(random.randint(-10,10) , random.randint(-10,10) )
-        self.speed = 0.1
+        self.speed = 5
         self.agility = 0.5
-        self.los_length = 150
+        self.los_length = 450
         self.target = pygame.Vector2()
         self.angle_to_target = 0
         self.angle_distance_target = 0
@@ -41,10 +48,13 @@ class Blob:
     
     def draw(self):
         #self.sprite to use with collision detection
-        
+        if self.gender == "male":
+            blob_color = blue
+        if self.gender == "female":
+            blob_color = pink
         self.size = 5+ (self.life / 2000)
-        self.sprite = pygame.draw.circle(screen, (black), self.position, self.size, 0)
-        pygame.draw.circle(screen, (red), self.target, 2, 0)
+        self.sprite = pygame.draw.circle(screen, blob_color , self.position, self.size, 0)
+        self.targetsprite = pygame.draw.circle(screen, blob_color , self.target, 2, 0)
         pygame.draw.line(screen, black, self.position,  (self.size * 2 * self.direction) + self.position  )
     
     
@@ -56,16 +66,18 @@ class Blob:
             self.angle_to_target = vector_to_degrees(vector_to_target) 
             self.angle_distance_target = self.angle_to_target - (vector_to_degrees(self.direction) +180)
             self.angle_distance_target = map_to_range(self.angle_distance_target)
-
+            #Whats the distance to the target
             distance_vector_target = self.target - self.position
             distance = distance_vector.length()
             distance_target = distance_vector_target.length()
+            
+            #Is it within the range of view
             if distance < self.los_length:
                 distance_orientation = vector_to_degrees(distance_vector)
                 angular_distance = distance_orientation - (vector_to_degrees(self.direction) +180)
                 angular_distance = map_to_range(angular_distance)
 
-
+                #Is the food with in the Point of View
                 if abs(angular_distance) < 70:
                     if distance < distance_target:
                         self.target = foods[food].position
@@ -73,7 +85,7 @@ class Blob:
                     line_color = green
                     if foods[food].position == self.target:
                         line_color = black                 
-                    pygame.draw.line(screen, line_color, self.position, foods[food].position  )
+                        pygame.draw.line(screen, line_color, self.position, foods[food].position  )
                 
         pass
     
@@ -92,7 +104,7 @@ class Blob:
             self.direction = self.direction.rotate(-self.agility/2)
         if self.angle_distance_target < 0:
             self.direction = self.direction.rotate(self.agility/2)
-        self.position = self.position + self.direction * self.speed
+        self.position = self.position + self.direction * (self.speed /(self.size))
         if self.position == self.target:
             self.target = pygame.Vector2()
     
@@ -109,13 +121,17 @@ class Blob:
         for food in range(len(foods)):
             # print(foods[food].sprite)
             if self.sprite.colliderect(foods[food].sprite):
-                self.life += foods[food].size * 500
-                
+                #We have collided with a food
+                #increase life
+                self.life += foods[food].size * 150
                 foods.pop(food)
-                
                 eaten_food.append(food)
                 self.target = pygame.Vector2()
                 return
+            if self.sprite.colliderect(self.targetsprite):
+                self.target = pygame.Vector2()
+                return
+                
             #    print("Collision")
             # collisions = pygame.sprite.spritecollide(self.sprite.rect, foods[food].sprite.rect, False, pygame.sprite.collide_circle)
             # eaten_food.append(foods[food])
@@ -137,12 +153,18 @@ class Food:
          
         
 # Function to generate blobs and put them in a list
-def generate_Blobs(number):
+def generate_Blobs(number, gender):
+    """Generating a certain number of blobs with specified gender
+
+    Args:
+        number (int): Number of Blobs to generate
+        gender (str "male" or "female"): Gender of the blobs to be created
+    """
     generated = 0
     while generated < number:
         pos = [random.randint(10, 1000), random.randint(10, 780)]
         size = random.randint(3, 10)
-        blobs.append(Blob(pos, size))
+        blobs.append(Blob(pos, size, gender))
         generated += 1
     return 
 
@@ -189,7 +211,8 @@ def map_to_range(orientation):
 
 
 generate_Food(100)
-generate_Blobs(20)
+generate_Blobs(10, "male")
+generate_Blobs(10, "female")
 
 while True:
 
@@ -200,17 +223,29 @@ while True:
     for food in foods:
         food.draw()           
     
+    blobs_life = []
     for blob in blobs:
         blob.look_for_food()
         blob.move()
         blob.draw()
         blob.collision_detection() 
         blob.age()
-    
+        blobs_life.append(blob.life)
     if len(foods) < 50:
         generate_Food(70)                
 
     remove_dead_blobs()
+    average = sum(blobs_life) // len(blobs_life)
+    number_of_blobs = len(blobs)
+    text = font.render('Average life:'+str(average), True, green, blue)
+    text2 = font.render('Number of blobs:'+str(number_of_blobs), True, green, blue)
+    textRect = text.get_rect()
+    textRect2 = text2.get_rect()
+    textRect.center = (400, height - 30)
+    textRect2.center = (400, height - 10)
+    screen.blit(text, textRect)
+    screen.blit(text2, textRect2)
+    
     
     pygame.display.flip()
     pygame.display.update()
