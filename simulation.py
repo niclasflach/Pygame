@@ -2,6 +2,10 @@ import random
 import sys, pygame
 import pygame.math as math
 import math as pymath
+import time
+
+clock = pygame.time.Clock()
+
 
 pygame.init()
 
@@ -13,7 +17,8 @@ green = 180,250,180
 pink = 237, 104, 224
 blue = 44, 44, 230
 font = pygame.font.Font('freesansbold.ttf', 22)
-
+prev_time = time.time()
+FPS = 60
 
 
 screen = pygame.display.set_mode(size)
@@ -30,14 +35,18 @@ class Blob:
         self.gender = gender
         self.size = size 
         self.direction = pygame.Vector2(random.randint(-10,10) , random.randint(-10,10) )
-        self.speed = 5
+        self.speed = 500
         self.agility = 0.5
         self.los_length = 450
         self.target = pygame.Vector2()
         self.angle_to_target = 0
         self.angle_distance_target = 0
+        self.status = 0
         
-        self.direction = self.direction.normalize()
+        try:
+            self.direction = self.direction.normalize()
+        except:
+            print("vector error")
         # self.direction = random.randint(0,10) - 5, random.randint(0,10) - 5
     
     def __del__(self):
@@ -53,9 +62,9 @@ class Blob:
         if self.gender == "female":
             blob_color = pink
         self.size = 5+ (self.life / 2000)
-        self.sprite = pygame.draw.circle(screen, blob_color , self.position, self.size, 0)
+        self.sprite = pygame.draw.circle(screen, blob_color , self.position, self.size/2, 0)
         self.targetsprite = pygame.draw.circle(screen, blob_color , self.target, 2, 0)
-        pygame.draw.line(screen, black, self.position,  (self.size * 2 * self.direction) + self.position  )
+        # pygame.draw.line(screen, black, self.position,  (self.size * 2 * self.direction) + self.position  )
     
     
     def look_for_food(self):
@@ -83,9 +92,9 @@ class Blob:
                         self.target = foods[food].position
                     
                     line_color = green
-                    if foods[food].position == self.target:
-                        line_color = black                 
-                        pygame.draw.line(screen, line_color, self.position, foods[food].position  )
+                    #if foods[food].position == self.target:
+                    #    line_color = black                 
+                    #    pygame.draw.line(screen, line_color, self.position, foods[food].position  )
                 
         pass
     
@@ -101,13 +110,28 @@ class Blob:
             self.target = pygame.Vector2((width/2, height/2))
         #print(self.angle_distance_target)
         if self.angle_distance_target > 0:
-            self.direction = self.direction.rotate(-self.agility/2)
+            self.direction = self.direction.rotate((-self.agility/self.size)*40)
         if self.angle_distance_target < 0:
-            self.direction = self.direction.rotate(self.agility/2)
-        self.position = self.position + self.direction * (self.speed /(self.size))
+            self.direction = self.direction.rotate((self.agility/self.size)*40)
+        self.position = self.position + self.direction * (self.speed /(self.size)*dt)
         if self.position == self.target:
             self.target = pygame.Vector2()
     
+    def mate(self):
+        if self.status != 2:
+            self.status = 1
+        if self.gender == "female":
+            self.speed = 0
+        if self.gender == "male":
+            for blob in range(len(blobs)):
+                if blobs[blob].gender == "female" and blobs[blob].status == 1:
+                    self.target = blobs[blob].position
+                    vector_to_female = self.position - blobs[blob].position
+                    distance_to_female = vector_to_female.length()
+                    if distance_to_female < 50:
+                        blobs[blob].status = 2
+                    
+                    
     
     def age(self):
         self.life -= 1
@@ -123,7 +147,7 @@ class Blob:
             if self.sprite.colliderect(foods[food].sprite):
                 #We have collided with a food
                 #increase life
-                self.life += foods[food].size * 150
+                self.life += foods[food].size * 80
                 foods.pop(food)
                 eaten_food.append(food)
                 self.target = pygame.Vector2()
@@ -131,11 +155,7 @@ class Blob:
             if self.sprite.colliderect(self.targetsprite):
                 self.target = pygame.Vector2()
                 return
-                
-            #    print("Collision")
-            # collisions = pygame.sprite.spritecollide(self.sprite.rect, foods[food].sprite.rect, False, pygame.sprite.collide_circle)
-            # eaten_food.append(foods[food])
-            # self.life += 1000
+
             
         pass
         
@@ -210,12 +230,19 @@ def map_to_range(orientation):
     return orientation - 360*pymath.floor((orientation + 180) * (1/360))
 
 
-generate_Food(100)
+generate_Food(20)
 generate_Blobs(10, "male")
 generate_Blobs(10, "female")
 
 while True:
-
+    clock.tick(FPS)    
+    
+    now = time.time()
+    dt = now - prev_time
+    prev_time = now
+    
+    generate_Food(1)
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT: sys.exit()
     screen.fill(grey)
@@ -226,13 +253,22 @@ while True:
     blobs_life = []
     for blob in blobs:
         blob.look_for_food()
+        blobs_life.append(blob.life)
+        if blob.life > 15000 and blob.status != 2:
+            blob.mate()
+        if blob.life > 15000 and blob.status == 2:
+            #Status 2 means pergnant and here two new babies are born
+            generate_Blobs(1, "female")
+            generate_Blobs(1, "male")
+            blob.status = 0
+        if blob.life < 10000 and blob.gender =="female":
+            blob.speed = 500
         blob.move()
         blob.draw()
         blob.collision_detection() 
         blob.age()
-        blobs_life.append(blob.life)
-    if len(foods) < 50:
-        generate_Food(70)                
+    #if len(foods) < 10:
+    #    generate_Food(20)                
 
     remove_dead_blobs()
     average = sum(blobs_life) // len(blobs_life)
