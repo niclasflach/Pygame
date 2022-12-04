@@ -19,6 +19,8 @@ blue = 44, 44, 230
 font = pygame.font.Font('freesansbold.ttf', 22)
 prev_time = time.time()
 FPS = 60
+MAXIMUM_AGE = 5000
+blobs_have_died = 0
 
 
 screen = pygame.display.set_mode(size)
@@ -42,11 +44,13 @@ class Blob:
         self.angle_to_target = 0
         self.angle_distance_target = 0
         self.status = 0
+        self.ticks_alive = 0
         
         try:
             self.direction = self.direction.normalize()
         except:
-            print("vector error")
+            print("vector error, killing blob with ageing")
+            self.ticks_alive = 20000
         # self.direction = random.randint(0,10) - 5, random.randint(0,10) - 5
     
     def __del__(self):
@@ -65,6 +69,7 @@ class Blob:
         self.sprite = pygame.draw.circle(screen, blob_color , self.position, self.size/2, 0)
         self.targetsprite = pygame.draw.circle(screen, blob_color , self.target, 2, 0)
         # pygame.draw.line(screen, black, self.position,  (self.size * 2 * self.direction) + self.position  )
+        self.ticks_alive += 1
     
     
     def look_for_food(self):
@@ -124,12 +129,14 @@ class Blob:
             self.speed = 0
         if self.gender == "male":
             for blob in range(len(blobs)):
-                if blobs[blob].gender == "female" and blobs[blob].status == 1:
+                if blobs[blob].gender == "female" and blobs[blob].status == 1 and self.status != 1:
                     self.target = blobs[blob].position
-                    vector_to_female = self.position - blobs[blob].position
-                    distance_to_female = vector_to_female.length()
-                    if distance_to_female < 50:
-                        blobs[blob].status = 2
+                    self.status = 1                   
+                vector_to_female = self.position - blobs[blob].position
+                distance_to_female = vector_to_female.length()
+                if distance_to_female < 20:
+                    blobs[blob].status = 2
+                    self.status = 0
                     
                     
     
@@ -207,18 +214,24 @@ def remove_eaten_food(eaten_food):
 
     pass 
 
-def remove_dead_blobs():
+def remove_dead_blobs(blobs_have_died):
     blobs_to_kill = []
     for i in range(len(blobs)):
-        if blobs[i].life <= 0:
+        if blobs[i].life <= 0 or blobs[i].ticks_alive > MAXIMUM_AGE:
+            if blobs[i].ticks_alive > MAXIMUM_AGE:
+                reason = "Age"
+            else:
+                reason = "Starvation"
             blobs_to_kill.append(i)    
-            print("one mor blob is dead...")    
+            blobs_have_died += 1
+            print("one mor blob is dead... The reason was %s" % reason) 
+        
     for dead in blobs_to_kill:
         try:
             blobs.pop(dead)
         except:
             print("Cant delete food")
-
+    return blobs_have_died
 
 def vector_to_degrees(vector):
     """ Returns the angle from X+ axis to the given vector """
@@ -270,7 +283,7 @@ while True:
     #if len(foods) < 10:
     #    generate_Food(20)                
 
-    remove_dead_blobs()
+    blobs_have_died = remove_dead_blobs(blobs_have_died)
     average = sum(blobs_life) // len(blobs_life)
     number_of_blobs = len(blobs)
     text = font.render('Average life:'+str(average), True, green, blue)
