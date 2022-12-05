@@ -16,6 +16,7 @@ red = 255,0,0
 green = 180,250,180
 pink = 237, 104, 224
 blue = 44, 44, 230
+yellow = 242, 250, 7
 font = pygame.font.Font('freesansbold.ttf', 22)
 prev_time = time.time()
 FPS = 60
@@ -67,6 +68,9 @@ class Blob:
             blob_color = pink
         self.size = 5+ (self.life / 2000)
         self.sprite = pygame.draw.circle(screen, blob_color , self.position, self.size/2, 0)
+        if self.status == 2:
+            pygame.draw.circle(screen, yellow , self.position, 4, 0)
+            
         self.targetsprite = pygame.draw.circle(screen, blob_color , self.target, 2, 0)
         # pygame.draw.line(screen, black, self.position,  (self.size * 2 * self.direction) + self.position  )
         self.ticks_alive += 1
@@ -141,7 +145,7 @@ class Blob:
                     
     
     def age(self):
-        self.life -= 1
+        self.life -= 4
     
     
     def collision_detection(self):
@@ -274,6 +278,7 @@ while True:
             generate_Blobs(1, "female")
             generate_Blobs(1, "male")
             blob.status = 0
+            blob.speed = 500
         if blob.life < 10000 and blob.gender =="female":
             blob.speed = 500
         blob.move()
