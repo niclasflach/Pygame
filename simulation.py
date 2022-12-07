@@ -38,9 +38,9 @@ class Blob:
         self.gender = gender
         self.size = size 
         self.direction = pygame.Vector2(random.randint(-10,10) , random.randint(-10,10) )
-        self.speed = 500
-        self.agility = 0.5
-        self.los_length = 450
+        self.speed = random.randint(300,800)
+        self.agility = random.randint(3,10) * 0.5
+        self.los_length = random.randint(200,800)
         self.target = pygame.Vector2()
         self.angle_to_target = 0
         self.angle_distance_target = 0
